@@ -32,6 +32,8 @@ public struct OmnipodPumpManagerState: RawRepresentable, Equatable {
 
     public var confirmationBeeps: Bool
 
+    public var optionalPodAlarms: Bool
+
     // Temporal state not persisted
 
     internal enum EngageablePumpState: Equatable {
@@ -57,6 +59,7 @@ public struct OmnipodPumpManagerState: RawRepresentable, Equatable {
         self.rileyLinkConnectionManagerState = rileyLinkConnectionManagerState
         self.unstoredDoses = []
         self.confirmationBeeps = false
+        self.optionalPodAlarms = false
     }
     
     public init?(rawValue: RawValue) {
@@ -128,6 +131,8 @@ public struct OmnipodPumpManagerState: RawRepresentable, Equatable {
         }
 
         self.confirmationBeeps = rawValue["confirmationBeeps"] as? Bool ?? rawValue["bolusBeeps"] as? Bool ?? false
+
+        self.optionalPodAlarms = rawValue["optionalPodAlarms"] as? Bool ?? false
         
         if let pairingAttemptAddress = rawValue["pairingAttemptAddress"] as? UInt32 {
             self.pairingAttemptAddress = pairingAttemptAddress
@@ -141,6 +146,7 @@ public struct OmnipodPumpManagerState: RawRepresentable, Equatable {
             "basalSchedule": basalSchedule.rawValue,
             "unstoredDoses": unstoredDoses.map { $0.rawValue },
             "confirmationBeeps": confirmationBeeps,
+            "optionalPodAlarms": optionalPodAlarms,
         ]
         
         if let podState = podState {
@@ -194,6 +200,7 @@ extension OmnipodPumpManagerState: CustomDebugStringConvertible {
             "* lastPumpDataReportDate: \(String(describing: lastPumpDataReportDate))",
             "* isPumpDataStale: \(String(describing: isPumpDataStale))",
             "* confirmationBeeps: \(String(describing: confirmationBeeps))",
+            "* optionalPodAlarms: \(String(describing: optionalPodAlarms))",
             "* pairingAttemptAddress: \(String(describing: pairingAttemptAddress))",
             String(reflecting: podState),
             String(reflecting: rileyLinkConnectionManagerState),

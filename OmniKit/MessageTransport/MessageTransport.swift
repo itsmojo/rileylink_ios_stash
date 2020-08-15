@@ -11,6 +11,13 @@ import os.log
 
 import RileyLinkBLEKit
 
+var percentLostPackets: Float = 0.0         // TESTING, % of packets to fake drop, 0.25 means drop 1/4 of packets
+var dontDropAckPackets: Bool = true         // TESTING, whether to drop ACK packets for FAKE Lost Packets
+var dontDropConPackets: Bool = true         // TESTING, whether to drop CON packets for FAKE Lost Packets
+var onlyDropConPackets: Bool = false        // TESTING, whether to only drop incoming CON packets for FAKE Lost Packets
+var logFFFFFFFFDrops: Bool = false          // TESTING, whether to log packets that are dropped due to an address of FFFFFFFF
+var logAddressDrops: Bool = false           // TESTING, whether to log any packets that are dropped due to an incorrect address
+
 protocol MessageLogger: class {
     // Comms logging
     func didSend(_ message: Data)
@@ -182,12 +189,46 @@ class PodMessageTransport: MessageTransport {
 
                 guard candidatePacket.address == packet.address || candidatePacket.address == 0xFFFFFFFF else {
                     log.default("Packet address 0x%x does not match 0x%x", candidatePacket.address, packet.address)
+                    if logAddressDrops {
+                        messageLogger?.didReceive(candidatePacket.encoded()) // log the dropped packet with the wrong address
+                    } else if logFFFFFFFFDrops && candidatePacket.address == 0xFFFFFFFF {
+                        messageLogger?.didReceive(candidatePacket.encoded()) // log the dropped packet using FFFFFFFF (only can happen if acceptFFFFFFFF == false)
+                    }
                     continue
                 }
                 
                 guard candidatePacket.sequenceNum == ((packet.sequenceNum + 1) & 0b11111) else {
                     log.default("Packet sequence %@ does not match %@", String(describing: candidatePacket.sequenceNum), String(describing: ((packet.sequenceNum + 1) & 0b11111)))
                     continue
+                }
+
+                // For pairing commands it's possible have ack packets with the wrong address if the pod gets in some confused state.
+                // Also this could happen in weird cases with two nearby pairing pods or another degenerate pod running with a
+                // packet address of $ffffffff. Not sure what to do if this is detected. For now, just log the condition.
+                if candidatePacket.address == 0xFFFFFFFF && candidatePacket.packetType == .ack {
+                    if candidatePacket.data.count >= 4 {
+                        let candidatePacketAckAddress = candidatePacket.data[0...].toBigEndian(UInt32.self)
+                        if candidatePacketAckAddress != ackAddress {
+                            log.error("exchangePackets: received ACK packet %@ with address of %{public}@ instead of expected %{public}@",
+                              String(describing: candidatePacket), String(format: "%04X", candidatePacket.address), String(format: "%04X", ackAddress))
+                        }
+                    } else {
+                        log.error("exchangePackets: received ACK packet %@ with unexpected short data.count value of %u",
+                          String(describing: candidatePacket), candidatePacket.data.count)
+                    }
+                }
+
+                if percentLostPackets > 0.0 {
+                    if candidatePacket.packetType != .con && onlyDropConPackets {
+                        log.default("exchangePackets: no FAKE drop of non CON packet %@", String(describing: candidatePacket))
+                    } else if candidatePacket.packetType == .con && dontDropConPackets {
+                        log.default("exchangePackets: no FAKE drop of CON packet %@", String(describing: candidatePacket))
+                    } else if candidatePacket.packetType == .ack && dontDropAckPackets {
+                        log.default("exchangePackets: no FAKE drop of ACK packet %@", String(describing: candidatePacket))
+                    } else if Float.random(in: 0 ..< 1) <= percentLostPackets {
+                        log.default("exchangePackets: FAKE DROP packet %@", String(describing: candidatePacket))
+                        continue
+                    }
                 }
                 
                 // Once we have verification that the POD heard us, we can increment our counters
@@ -284,9 +325,7 @@ class PodMessageTransport: MessageTransport {
                 throw PodCommsError.emptyResponse
             }
             
-            if response.messageBlocks[0].blockType != .errorResponse {
-                incrementMessageNumber()
-            }
+            incrementMessageNumber()
             
             return response
         } catch let error {

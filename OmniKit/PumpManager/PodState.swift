@@ -18,6 +18,7 @@ public enum SetupProgress: Int {
     case startingInsertCannula
     case cannulaInserting
     case completed
+    case activationTimeout
     
     public var primingNeeded: Bool {
         return self.rawValue < SetupProgress.priming.rawValue
@@ -129,6 +130,10 @@ public struct PodState: RawRepresentable, Equatable, CustomDebugStringConvertibl
         return setupProgress == .completed
     }
 
+    public var isFaulted: Bool {
+        return fault != nil || setupProgress == .activationTimeout
+    }
+
     public mutating func advanceToNextNonce() {
         nonceState.advanceToNextNonce()
     }
@@ -158,7 +163,7 @@ public struct PodState: RawRepresentable, Equatable, CustomDebugStringConvertibl
             // The more than a minute later test prevents oscillation of expiresAt based on the timing of the responses.
             self.expiresAt = expiresAtComputed
         }
-        updateDeliveryStatus(deliveryStatus: response.deliveryStatus)
+        updateDeliveryStatus(statusResponse: response)
         lastInsulinMeasurements = PodInsulinMeasurements(statusResponse: response, validTime: now, setupUnitsDelivered: setupUnitsDelivered)
         activeAlertSlots = response.alerts
     }
@@ -179,10 +184,14 @@ public struct PodState: RawRepresentable, Equatable, CustomDebugStringConvertibl
         }
     }
     
-    private mutating func updateDeliveryStatus(deliveryStatus: StatusResponse.DeliveryStatus) {
+    private mutating func updateDeliveryStatus(statusResponse: StatusResponse) {
         finalizeFinishedDoses()
 
-        if let bolus = unfinalizedBolus, bolus.scheduledCertainty == .uncertain {
+        let deliveryStatus = statusResponse.deliveryStatus
+        // add an unfinalizedBolus here if we don't have one and are currently bolusing in a ready state
+        if unfinalizedBolus == nil && deliveryStatus.bolusing && statusResponse.podProgressStatus.readyForDelivery {
+            unfinalizedBolus = UnfinalizedDose(bolusAmount: statusResponse.bolusNotDelivered, startTime: Date(), scheduledCertainty: .certain)
+        } else if let bolus = unfinalizedBolus, bolus.scheduledCertainty == .uncertain {
             if deliveryStatus.bolusing {
                 // Bolus did schedule
                 unfinalizedBolus?.scheduledCertainty = .certain

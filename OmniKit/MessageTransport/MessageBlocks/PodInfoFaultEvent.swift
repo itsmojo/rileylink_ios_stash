@@ -16,10 +16,10 @@ public struct PodInfoFaultEvent : PodInfo, Equatable {
     public var podInfoType: PodInfoResponseSubType = .faultEvents
     public let podProgressStatus: PodProgressStatus
     public let deliveryStatus: DeliveryStatus
-    public let insulinNotDelivered: Double
+    public let bolusNotDelivered: Double
     public let podMessageCounter: UInt8
     public let totalInsulinDelivered: Double
-    public let currentStatus: FaultEventCode
+    public let faultEventCode: FaultEventCode
     public let faultEventTimeSinceActivation: TimeInterval?
     public let reservoirLevel: Double?
     public let timeActive: TimeInterval
@@ -46,13 +46,13 @@ public struct PodInfoFaultEvent : PodInfo, Equatable {
         
         self.deliveryStatus = DeliveryStatus(rawValue: encodedData[2] & 0xf)!
         
-        self.insulinNotDelivered = Pod.pulseSize * Double((Int(encodedData[3] & 0x3) << 8) | Int(encodedData[4]))
+        self.bolusNotDelivered = Pod.pulseSize * Double((Int(encodedData[3] & 0x3) << 8) | Int(encodedData[4]))
         
         self.podMessageCounter = encodedData[5]
         
         self.totalInsulinDelivered = Pod.pulseSize * Double((Int(encodedData[6]) << 8) | Int(encodedData[7]))
         
-        self.currentStatus = FaultEventCode(rawValue: encodedData[8])
+        self.faultEventCode = FaultEventCode(rawValue: encodedData[8])
         
         let minutesSinceActivation = encodedData[9...10].toBigEndian(UInt16.self)
         if minutesSinceActivation != 0xffff {
@@ -105,10 +105,10 @@ extension PodInfoFaultEvent: CustomDebugStringConvertible {
             "* rawHex: \(data.hexadecimalString)",
             "* podProgressStatus: \(podProgressStatus)",
             "* deliveryStatus: \(deliveryStatus.description)",
-            "* insulinNotDelivered: \(insulinNotDelivered.twoDecimals) U",
+            "* bolusNotDelivered: \(bolusNotDelivered.twoDecimals) U",
             "* podMessageCounter: \(podMessageCounter)",
             "* totalInsulinDelivered: \(totalInsulinDelivered.twoDecimals) U",
-            "* currentStatus: \(currentStatus.description)",
+            "* faultEventCode: \(faultEventCode.description)",
             "* faultEventTimeSinceActivation: \(faultEventTimeSinceActivation?.stringValue ?? "none")",
             "* reservoirLevel: \(reservoirLevel?.twoDecimals ?? "50+") U",
             "* timeActive: \(timeActive.stringValue)",
