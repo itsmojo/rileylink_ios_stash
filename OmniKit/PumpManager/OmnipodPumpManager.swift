@@ -1109,7 +1109,7 @@ extension OmnipodPumpManager {
                     var str = pulseLogString(pulseLogEntries: podInfoPulseLogRecent.pulseLog, lastPulseNumber: lastPulseNumber)
 
                     // read up to the previous 50 entries from the pulse log
-                    let podInfoResponse2 = try session.readPodInfo(podInfoResponseSubType: .dumpOlderPulseLog, beepMessage: beepMessage)
+                    let podInfoResponse2 = try session.readPodInfo(podInfoResponseSubType: .pulseLogPrevious, beepMessage: beepMessage)
                     let podInfoPulseLogPrevious = podInfoResponse2.podInfo as! PodInfoPulseLogPrevious
                     lastPulseNumber -= podInfoPulseLogRecent.pulseLog.count
                     str += pulseLogString(pulseLogEntries: podInfoPulseLogPrevious.pulseLog, lastPulseNumber: lastPulseNumber)

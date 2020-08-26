@@ -133,6 +133,7 @@ class PairPodSetupViewController: SetupTableViewController {
             }
             
             var errorStrings: [String]
+            var errorText: String
             
             if let error = lastError as? LocalizedError {
                 errorStrings = [error.errorDescription, error.failureReason, error.recoverySuggestion].compactMap { $0 }
@@ -144,7 +145,7 @@ class PairPodSetupViewController: SetupTableViewController {
                 if previouslyEncounteredWeakComms || attemptingPairingRetry {
                     errorStrings.append(LocalizedString("If the problem persists, move to a new area and try again", comment: "Additional pairing recovery suggestion on multiple pairing failures"))
                 }
-                let errMess = errorStrings.joined(separator: ". ")
+                errorText = errorStrings.joined(separator: ". ")
 
                 // Optionally replicate the PDM pairing UI on weak comms by beeping and displaying a reposition suggestion to
                 // the user and continue trying to pair on the initial attempt and prompt to relocate on the second such problem.
@@ -152,27 +153,28 @@ class PairPodSetupViewController: SetupTableViewController {
                     AudioServicesPlayAlertSound(kSystemSoundID_Vibrate)
                     AudioServicesPlayAlertSound(SystemSound_alarm)
                     if !attemptingPairingRetry {
-                        loadingText = String(format: LocalizedString("Communications error!\n%1$@.\n\nPairing…", comment: "The format string for communciations error while continuing to pair (1: error string)"), errMess)
+                        loadingText = String(format: LocalizedString("Communications error!\n%1$@.\n\nPairing…", comment: "The format string for communciations error while continuing to pair (1: error string)"), errorText)
                         attemptingPairingRetry = true
                         pair()
                     } else {
-                        loadingText = String(format: LocalizedString("Communications error!\n%1$@.", comment: "The format string for communications error (1: error string)"), errMess)
+                        loadingText = String(format: LocalizedString("Communications error!\n%1$@.", comment: "The format string for communications error (1: error string)"), errorText)
                         continueState = .initial
                     }
                 } else {
-                    loadingText = String(format: LocalizedString("%1$@ and try again.", comment: "The format string for communications error (1: error string)"), errMess)
+                    loadingText = String(format: LocalizedString("%1$@ and try again.", comment: "The format string for communications error (1: error string)"), errorText)
                     previouslyEncounteredWeakComms = true
                     continueState = .initial
                 }
                 return
             }
             
-            let errMess = errorStrings.joined(separator: ". ")
-            if errMess != "" {
-                loadingText = errMess + "."
-            } else {
-                loadingText = ""
+            errorText = errorStrings.joined(separator: ". ")
+            if !errorText.isEmpty {
+                errorText += "."
+            } else if lastError != nil {
+                errorText = String(describing: lastError) + "."
             }
+            loadingText = errorText
             
             // If we have an error, update the continue state
             if let podCommsError = lastError as? PodCommsError {

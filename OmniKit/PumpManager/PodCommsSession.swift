@@ -693,19 +693,16 @@ public class PodCommsSession {
             // (or if it was called and it had a fault return) & then read the pulse log.
             handleCancelDosing(deliveryType: .all, bolusNotDelivered: fault.bolusNotDelivered)
             do {
-                // try to read pulse log entries for later analysis, but don't throw on error
+                // read the most recent pulse log entries for later analysis, but don't throw on error
                 let podInfoCommand = GetStatusCommand(podInfoType: .pulseLogRecent)
                 let _: PodInfoResponse = try send([podInfoCommand])
-                let podInfoCommand2 = GetStatusCommand(podInfoType: .dumpOlderPulseLog)
-                let _: PodInfoResponse = try send([podInfoCommand2])
             } catch let error {
                 log.error("Read pulse log failed: %@", String(describing: error))
             }
         }
 
-        let deactivatePod = DeactivatePodCommand(nonce: podState.currentNonce)
-
         do {
+            let deactivatePod = DeactivatePodCommand(nonce: podState.currentNonce)
             let _: StatusResponse = try send([deactivatePod])
         } catch let error as PodCommsError {
             switch error {

@@ -289,17 +289,18 @@ class PodInfoTests: XCTestCase {
     
     func testPodInfoDataLog() {
         // 02DATAOFF 0  1  2 3  4 5  6  7  8
-        // 02 LL // 03 PP QQQQ SSSS 04 3c  ....
-        // 02 7c // 03 01 0001 0001 04 3c ....
+        // 02 LL // 03 PP QQQQ SSSS 04 3c NNNNNNNN NNNNNNNN NNNNNNNN
+        // 02 14 // 03 5F 0001 0002 04 3c 01020304 05060708 090a0b0c
         do {
-            let decoded = try PodInfoDataLog(encodedData: Data(hexadecimalString: "030100010001043c")!)
+            let decoded = try PodInfoDataLog(encodedData: Data(hexadecimalString: "035F00010002043c0102030405060708090a0b0c")!)
             XCTAssertEqual(.dataLog, decoded.podInfoType)
-            XCTAssertEqual(.failedFlashErase, decoded.faultEventCode.faultType)
+            XCTAssertEqual(.checkVoltageFailure, decoded.faultEventCode.faultType)
             XCTAssertEqual(0001*60, decoded.timeFaultEvent)
-            XCTAssertEqual(0001*60, decoded.timeActivation)
-            XCTAssertEqual(04, decoded.dataChunkSize)
-            XCTAssertEqual(60, decoded.dataChunkWords)
-            // TODO adding a datadump variable based on length LL
+            XCTAssertEqual(0002*60, decoded.timeActivation)
+            XCTAssertEqual(3, decoded.nEntries)
+            XCTAssertEqual(0x01020304, decoded.pulseLog[0])
+            XCTAssertEqual(0x05060708, decoded.pulseLog[1])
+            XCTAssertEqual(0x090a0b0c, decoded.pulseLog[2])
         } catch (let error) {
             XCTFail("message decoding threw error: \(error)")
         }
@@ -334,6 +335,7 @@ class PodInfoTests: XCTestCase {
             let decoded = try PodInfoPulseLogRecent(encodedData: Data(hexadecimalString: "50008634212e00392031003c212d004120300044202c0049212e004c212b0051202f0054212c00592030805c202d806120308000212e800521318008202f800d20328010202f801521318018202f801d21318020202e8025213300282032002d2135003021310035213400382131003d2035004020310045213300482030004d21320050212f0055203300582030805d21328060202f800120308004202c80092131800c2130801121328014203180192133801c2031802120328024213200292035002c21310031213400")!)
             XCTAssertEqual(.pulseLogRecent, decoded.podInfoType)
             XCTAssertEqual(134, decoded.indexLastEntry)
+            XCTAssertEqual(50, decoded.nEntries)
             XCTAssertEqual(0x34212e00, decoded.pulseLog[0])
             XCTAssertEqual(0x59203080, decoded.pulseLog[9])
             XCTAssertEqual(0x1d213180, decoded.pulseLog[19])
@@ -350,7 +352,7 @@ class PodInfoTests: XCTestCase {
         do {
             // Decode
             let decoded = try PodInfoPulseLogPrevious(encodedData: Data(hexadecimalString: "51003214602500196128001c6124002161280024612500296129002c60260031602a003460260039612a803c61268041602c800060278005632880086025800d6128801061258015612780186023801d6026802061228025602700286124002d2128003020270035202a00382027003d202a004020290045202c0048202a004d212c005021290055212c00582129805d202b806020288001202d8004212a8009202d800c21298011212a80142129801921801c212a8021212c8024202c0029212f002c212d003120310082")!)
-            XCTAssertEqual(.dumpOlderPulseLog, decoded.podInfoType)
+            XCTAssertEqual(.pulseLogPrevious, decoded.podInfoType)
             XCTAssertEqual(50, decoded.nEntries)
             XCTAssertEqual(0x14602500, decoded.pulseLog[0])
             XCTAssertEqual(0x39612a80, decoded.pulseLog[9])

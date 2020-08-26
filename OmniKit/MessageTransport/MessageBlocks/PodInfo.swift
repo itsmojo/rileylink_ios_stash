@@ -16,13 +16,13 @@ public protocol PodInfo {
 }
 
 public enum PodInfoResponseSubType: UInt8, Equatable {
-    case normal                      = 0x00
-    case configuredAlerts            = 0x01
-    case faultEvents                 = 0x02
-    case dataLog                     = 0x03
-    case fault                       = 0x05
-    case pulseLogRecent              = 0x50 // dumps up to 50 entries data from the pulse log
-    case dumpOlderPulseLog           = 0x51 // like 0x50, but dumps entries before the last 50
+    case normal                      = 0x00 // returns the normal (single packet) StatusResponse
+    case configuredAlerts            = 0x01 // returns information about the configured alerts
+    case faultEvents                 = 0x02 // returned for faults and pod info type 2 requests
+    case dataLog                     = 0x03 // returns up to the last 60 pulse log entries and other fault info
+    case fault                       = 0x05 // returns fault code & time from activation and pod initialization time
+    case pulseLogRecent              = 0x50 // returns up to the last 50 entries data from the pulse log
+    case pulseLogPrevious            = 0x51 // similar to 0x50, but returns pulse log entries previous to the last 50 entries
     
     public var podInfoType: PodInfo.Type {
         switch self {
@@ -38,7 +38,7 @@ public enum PodInfoResponseSubType: UInt8, Equatable {
             return PodInfoFault.self
         case .pulseLogRecent:
             return PodInfoPulseLogRecent.self
-        case .dumpOlderPulseLog:
+        case .pulseLogPrevious:
             return PodInfoPulseLogPrevious.self
         }
     }
