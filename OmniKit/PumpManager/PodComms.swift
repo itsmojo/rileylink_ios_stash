@@ -21,7 +21,7 @@ fileprivate var minRssiAllowed: Int = 30                            // minimum R
 fileprivate var numRssiRetries = 3                                  // number of automatic retries on RSSI out of limits
 
 fileprivate var rssiTesting: Bool = false                           // TESTING, whether to display debug message with RSSI value to user w/o pairing
-fileprivate var alwaysDoAssignAddress: Bool = false                 // TESTING, whether to always do an AssignAddress on pairing retries
+fileprivate var alwaysDoAssignAddress: Bool = true                  // TESTING, whether to always do an AssignAddress on pairing retries
 
 
 protocol PodCommsDelegate: class {
