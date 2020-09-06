@@ -171,22 +171,31 @@ class PairPodSetupViewController: SetupTableViewController {
             errorText = errorStrings.joined(separator: ". ")
             if !errorText.isEmpty {
                 errorText += "."
-            } else if lastError != nil {
-                errorText = String(describing: lastError) + "."
             }
-            loadingText = errorText
             
             // If we have an error, update the continue state
             if let podCommsError = lastError as? PodCommsError {
                 switch podCommsError {
                 case .podFault, .activationTimeExceeded:
                     continueState = .fault
+                case .commsError(let error):
+                    // if we don't have any errorText yet, display the underlying comms error
+                    if errorText.isEmpty {
+                        errorText = String(describing: error)
+                    }
+                    continueState = .initial
                 default:
                     continueState = .initial
                 }
             } else if lastError != nil {
                 continueState = .initial
             }
+
+            // if there's an error but no errorText yet, display the error
+            if let error = lastError, errorText.isEmpty {
+                errorText = String(describing: error)
+            }
+            loadingText = errorText
         }
     }
     
@@ -254,7 +263,7 @@ class PairPodSetupViewController: SetupTableViewController {
 private extension PodCommsError {
     var possibleWeakCommsCause: Bool {
         switch self {
-        case .invalidData, .noResponse, .invalidAddress, .rssiTooLow, .rssiTooHigh:
+        case .invalidData, .noResponse, .invalidAddress, .rssiTooLow, .rssiTooHigh, .unexpectedPacketType:
             return true
         default:
             return false

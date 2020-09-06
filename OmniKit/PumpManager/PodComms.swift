@@ -125,7 +125,7 @@ class PodComms: CustomDebugStringConvertible {
                 throw PodCommsError.podChange
             }
 
-            if let rssi = config.rssi {
+            if let rssi = config.rssi, let gain = config.gain {
                 if enforceRssiLimits {
                     rssiRetries -= 1
                     if rssi < minRssiAllowed {
@@ -143,7 +143,7 @@ class PodComms: CustomDebugStringConvertible {
                         throw PodCommsError.rssiTooHigh
                     }
                 }
-                let rssiStr: String = String(format: "Pod reported signal strength is %u", rssi)
+                let rssiStr = String(format: "Receiver Low Gain: %u\nReceived Signal Strength Indicator: %u", gain, rssi)
                 log.default("%s", rssiStr)
                 if rssiTesting {
                     throw PodCommsError.debugFault(str: rssiStr)
