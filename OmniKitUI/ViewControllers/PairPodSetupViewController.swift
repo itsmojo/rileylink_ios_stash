@@ -179,9 +179,10 @@ class PairPodSetupViewController: SetupTableViewController {
                 case .podFault, .activationTimeExceeded:
                     continueState = .fault
                 case .commsError(let error):
-                    // if we don't have any errorText yet, display the underlying comms error
-                    if errorText.isEmpty {
-                        errorText = String(describing: error)
+                    // if we don't have any errorText yet for a commsError,
+                    // display the localized underlying error if possible
+                    if errorText.isEmpty && !error.localizedDescription.isEmpty {
+                        errorText = error.localizedDescription
                     }
                     continueState = .initial
                 default:
@@ -191,7 +192,7 @@ class PairPodSetupViewController: SetupTableViewController {
                 continueState = .initial
             }
 
-            // if there's an error but no errorText yet, display the error
+            // if there's an error but still no errorText yet, display the error
             if let error = lastError, errorText.isEmpty {
                 errorText = String(describing: error)
             }
