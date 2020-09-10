@@ -743,8 +743,15 @@ extension OmnipodPumpManager {
     }
 
     private func errorToReport(error: Error) -> Error {
-         let podCommsError = error as? PodCommsError ?? PodCommsError.commsError(error: error)
-         return podCommsError
+        if let podCommsError = error as? PodCommsError {
+            switch podCommsError {
+            case .commsError(let error):
+                return error // report the underlying commsError
+            default:
+                break
+            }
+        }
+        return error
     }
 
     private func localizedErrorToReport(error: LocalizedError) -> LocalizedError {
