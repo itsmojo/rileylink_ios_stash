@@ -742,26 +742,6 @@ extension OmnipodPumpManager {
         }
     }
 
-    private func errorToReport(error: Error) -> Error {
-        if let podCommsError = error as? PodCommsError {
-            switch podCommsError {
-            case .commsError(let error):
-                return error // report the underlying commsError
-            default:
-                break
-            }
-        }
-        return error
-    }
-
-    private func localizedErrorToReport(error: LocalizedError) -> LocalizedError {
-        let podCommsError = errorToReport(error: error)
-        if let localizedError = podCommsError as? LocalizedError {
-            return localizedError
-        }
-        return error
-    }
-
     // MARK: - Pump Commands
 
     public func acknowledgeAlerts(_ alertsToAcknowledge: AlertSet, completion: @escaping (_ alerts: [AlertSlot: PodAlert]?) -> Void) {
@@ -824,10 +804,10 @@ extension OmnipodPumpManager {
                     }
                     completion(nil)
                 } catch let error {
-                    completion(self.errorToReport(error: error))
+                    completion(error)
                 }
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -854,7 +834,7 @@ extension OmnipodPumpManager {
             completion(nil)
             return
         case .failure(let error):
-            completion(self.errorToReport(error: error))
+            completion(error)
             return
         }
 
@@ -868,9 +848,9 @@ extension OmnipodPumpManager {
                     let result = session.cancelDelivery(deliveryType: .all, beepType: .noBeep)
                     switch result {
                     case .certainFailure(let error):
-                        throw self.localizedErrorToReport(error: error)
+                        throw error
                     case .uncertainFailure(let error):
-                        throw self.localizedErrorToReport(error: error)
+                        throw error
                     case .success:
                         break
                     }
@@ -882,11 +862,11 @@ extension OmnipodPumpManager {
                     }
                     completion(nil)
                 case .failure(let error):
-                    throw self.localizedErrorToReport(error: error)
+                    throw error
                 }
             } catch let error {
                 self.log.error("Save basal profile failed: %{public}@", String(describing: error))
-                completion(self.errorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -927,19 +907,19 @@ extension OmnipodPumpManager {
                 } catch let error {
                     if forgetPodOnFail {
                         self.forgetPod(completion: {
-                            completion(self.errorToReport(error: error))
+                            completion(error)
                         })
                     } else {
-                        completion(self.errorToReport(error: error))
+                        completion(error)
                     }
                 }
             case .failure(let error):
                 if forgetPodOnFail {
                     self.forgetPod(completion: {
-                        completion(self.localizedErrorToReport(error: error))
+                        completion(error)
                     })
                 } else {
-                    completion(self.localizedErrorToReport(error: error))
+                    completion(error)
                 }
             }
         }
@@ -1035,7 +1015,7 @@ extension OmnipodPumpManager {
             } catch let error as LocalizedError {
                 reportError(error.localizedDescription)
             } catch let error {
-                reportError(String(describing: self.errorToReport(error: error)))
+                reportError(String(describing: error))
             }
         }
     }
@@ -1056,10 +1036,10 @@ extension OmnipodPumpManager {
                     try session.testingCommands(beepMessage: beepMessage)
                     completion(nil)
                 } catch let error {
-                    completion(self.errorToReport(error: error))
+                    completion(error)
                 }
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -1088,10 +1068,10 @@ extension OmnipodPumpManager {
                     // asynchronous to the UI which will have already printed Succeeded before the first beep sequence is done playing
                     completion(nil)
                 } catch let error {
-                    completion(self.errorToReport(error: error))
+                    completion(error)
                 }
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -1147,10 +1127,10 @@ extension OmnipodPumpManager {
                     }
                     completion(str)
                 } catch let error {
-                    completion(errString(self.errorToReport(error: error)))
+                    completion(errString(error))
                 }
             case .failure(let error):
-                completion(errString(self.localizedErrorToReport(error: error)))
+                completion(errString(error))
             }
         }
     }
@@ -1178,10 +1158,10 @@ extension OmnipodPumpManager {
                     self.confirmationBeeps = enabled
                     completion(nil)
                 } catch let error {
-                    completion(self.errorToReport(error: error))
+                    completion(error)
                 }
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -1210,10 +1190,10 @@ extension OmnipodPumpManager {
                     self.log.default("Set Optional Pod Alarms to %s", String(describing: enabled))
                     completion(nil)
                 } catch let error {
-                    completion(self.errorToReport(error: error))
+                    completion(error)
                 }
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -1316,7 +1296,7 @@ extension OmnipodPumpManager: PumpManager {
             case .success(let s):
                 session = s
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
                 return
             }
 
@@ -1334,9 +1314,9 @@ extension OmnipodPumpManager: PumpManager {
             let result = session.cancelDelivery(deliveryType: .all, beepType: .noBeep, beepMessage: beepMessage)
             switch result {
             case .certainFailure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             case .uncertainFailure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
             case .success:
                 session.dosesForStorage() { (doses) -> Bool in
                     return self.store(doses: doses, in: session)
@@ -1360,7 +1340,7 @@ extension OmnipodPumpManager: PumpManager {
             case .success(let s):
                 session = s
             case .failure(let error):
-                completion(self.localizedErrorToReport(error: error))
+                completion(error)
                 return
             }
 
@@ -1382,7 +1362,7 @@ extension OmnipodPumpManager: PumpManager {
                 }
                 completion(nil)
             } catch (let error) {
-                completion(self.errorToReport(error: error))
+                completion(error)
             }
         }
     }
@@ -1464,7 +1444,7 @@ extension OmnipodPumpManager: PumpManager {
             case .success(let s):
                 session = s
             case .failure(let error):
-                completion(.failure(SetBolusError.certain(self.localizedErrorToReport(error: error))))
+                completion(.failure(SetBolusError.certain(error)))
                 return
             }
             
@@ -1494,7 +1474,7 @@ extension OmnipodPumpManager: PumpManager {
             })
 
             if let error = preError {
-                completion(.failure(SetBolusError.certain(self.localizedErrorToReport(error: error))))
+                completion(.failure(SetBolusError.certain(error)))
                 return
             }
 
@@ -1544,9 +1524,9 @@ extension OmnipodPumpManager: PumpManager {
             case .success:
                 completion(.success(dose))
             case .certainFailure(let error):
-                completion(.failure(SetBolusError.certain(self.localizedErrorToReport(error: error))))
+                completion(.failure(SetBolusError.certain(error)))
             case .uncertainFailure(let error):
-                completion(.failure(SetBolusError.uncertain(self.localizedErrorToReport(error: error))))
+                completion(.failure(SetBolusError.uncertain(error)))
             }
         }
     }
@@ -1565,7 +1545,7 @@ extension OmnipodPumpManager: PumpManager {
             case .success(let s):
                 session = s
             case .failure(let error):
-                completion(.failure(self.localizedErrorToReport(error: error)))
+                completion(.failure(error))
                 return
             }
 
@@ -1605,7 +1585,7 @@ extension OmnipodPumpManager: PumpManager {
                     completion(.success(canceledDoseEntry))
                 }
             } catch {
-                completion(.failure(self.errorToReport(error: error)))
+                completion(.failure(error))
             }
         }
     }
@@ -1627,7 +1607,7 @@ extension OmnipodPumpManager: PumpManager {
             case .success(let s):
                 session = s
             case .failure(let error):
-                completion(.failure(self.localizedErrorToReport(error: error)))
+                completion(.failure(error))
                 return
             }
 
@@ -1708,15 +1688,15 @@ extension OmnipodPumpManager: PumpManager {
                     case .success:
                         completion(.success(dose))
                     case .uncertainFailure(let error):
-                        self.log.error("Temp basal uncertain error: %@", String(describing: self.localizedErrorToReport(error: error)))
+                        self.log.error("Temp basal uncertain error: %@", String(describing: error))
                         completion(.success(dose))
                     case .certainFailure(let error):
-                        completion(.failure(self.localizedErrorToReport(error: error)))
+                        completion(.failure(error))
                     }
                 }
             } catch let error {
                 self.log.error("Error during temp basal: %@", String(describing: error))
-                completion(.failure(self.errorToReport(error: error)))
+                completion(.failure(error))
             }
         }
     }

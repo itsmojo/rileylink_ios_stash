@@ -167,36 +167,27 @@ class PairPodSetupViewController: SetupTableViewController {
                 }
                 return
             }
-            
             errorText = errorStrings.joined(separator: ". ")
+            
             if !errorText.isEmpty {
                 errorText += "."
+            } else if let error = lastError {
+                // We have an error but no error text, generate a string to describe the error
+                errorText = String(describing: error)
             }
+            loadingText = errorText
             
             // If we have an error, update the continue state
             if let podCommsError = lastError as? PodCommsError {
                 switch podCommsError {
                 case .podFault, .activationTimeExceeded:
                     continueState = .fault
-                case .commsError(let error):
-                    // if we don't have any errorText yet for a commsError,
-                    // display the localized underlying error if possible
-                    if errorText.isEmpty && !error.localizedDescription.isEmpty {
-                        errorText = error.localizedDescription
-                    }
-                    continueState = .initial
                 default:
                     continueState = .initial
                 }
             } else if lastError != nil {
                 continueState = .initial
             }
-
-            // if there's an error but still no errorText yet, display the error
-            if let error = lastError, errorText.isEmpty {
-                errorText = String(describing: error)
-            }
-            loadingText = errorText
         }
     }
     
