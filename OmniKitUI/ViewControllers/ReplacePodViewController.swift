@@ -148,8 +148,10 @@ class ReplacePodViewController: SetupTableViewController {
             
             if let error = lastError as? LocalizedError {
                 let localizedText = [error.errorDescription, error.failureReason, error.recoverySuggestion].compactMap({ $0 }).joined(separator: ". ")
-
-                if !localizedText.isEmpty {
+                
+                if localizedText.isEmpty {
+                    errorText = String(describing: error)
+                } else {
                     errorText = localizedText + "."
                 }
             }
